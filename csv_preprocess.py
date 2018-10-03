@@ -25,6 +25,7 @@ def create_net_format(path, new_path,image_path):
             else:
                 continue
 
+
             if class_name not in class_list:
                 class_list.append(class_name)
                 with open(class_list_path, 'a') as c:
