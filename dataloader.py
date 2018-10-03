@@ -18,7 +18,7 @@ import skimage.color
 import skimage
 
 from PIL import Image
-
+from six import raise_from
 
 class CocoDataset(Dataset):
     """Coco dataset."""
@@ -206,6 +206,7 @@ class CSVDataset(Dataset):
         img = self.load_image(idx)
         annot = self.load_annotations(idx)
         sample = {'img': img, 'annot': annot}
+        # print ('transforming image:' + self.image_names[idx])
         if self.transform:
             sample = self.transform(sample)
 
@@ -406,7 +407,8 @@ class Normalizer(object):
     def __call__(self, sample):
 
         image, annots = sample['img'], sample['annot']
-
+        if image.shape[2] == 4:
+            image = image[:, :, :3]
         return {'img':((image.astype(np.float32)-self.mean)/self.std), 'annot': annots}
 
 class UnNormalizer(object):
