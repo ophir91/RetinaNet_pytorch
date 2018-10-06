@@ -19,10 +19,10 @@ import torchvision
 import model
 from anchors import Anchors
 import losses
-from dataloader import CocoDataset, CSVDataset, collater, Resizer, AspectRatioBasedSampler, Augmenter, UnNormalizer, Normalizer
+from dataloader import CSVDataset, collater, Resizer, AspectRatioBasedSampler, Augmenter, UnNormalizer, Normalizer
 from torch.utils.data import Dataset, DataLoader
 
-import coco_eval
+#import coco_eval
 import csv_eval
 
 assert torch.__version__.split('.')[1] == '4'
@@ -50,15 +50,8 @@ def main(args=None):
     parser = parser.parse_args(args)
 
     # Create the data loaders
-    if parser.dataset == 'coco':
 
-        if parser.coco_path is None:
-            raise ValueError('Must provide --coco_path when training on COCO,')
-
-        dataset_train = CocoDataset(parser.coco_path, set_name='train2017', transform=transforms.Compose([Normalizer(), Augmenter(), Resizer()]))
-        dataset_val = CocoDataset(parser.coco_path, set_name='val2017', transform=transforms.Compose([Normalizer(), Resizer()]))
-
-    elif parser.dataset == 'csv':
+    if parser.dataset == 'csv':
 
         if parser.csv_train is None:
             raise ValueError('Must provide --csv_train when training on COCO,')
