@@ -205,11 +205,11 @@ class CSVDataset(Dataset):
         image_list = os.listdir(image_dir)
         for image_id in self.image_data:
             if str(image_id) + '.tiff' in image_list:
-                new_line = [image_dir + str(image_id) + '.tiff']
+                new_line = image_dir + str(image_id) + '.tiff'
             elif str(image_id) + '.jpg' in image_list:
-                new_line = [image_dir + str(image_id) + '.jpg']
+                new_line = image_dir + str(image_id) + '.jpg'
             elif str(image_id) + '.tif' in image_list:
-                new_line = [image_dir + str(image_id) + '.tif']
+                new_line = image_dir + str(image_id) + '.tif'
             else:
                 continue
             self.image_names.append(new_line)
