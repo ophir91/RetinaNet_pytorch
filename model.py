@@ -181,6 +181,8 @@ class ResNet(nn.Module):
 
         self.regressionModel = RegressionModel(256)
         self.classificationModel = ClassificationModel(256, num_classes=num_classes)
+        self.classificationColor = ClassificationModel(256, num_classes=7)
+        self.classificationType = ClassificationModel(256, num_classes=15)
 
         self.anchors = Anchors()
 
@@ -253,15 +255,15 @@ class ResNet(nn.Module):
         regression = torch.cat([self.regressionModel(feature) for feature in features], dim=1)
 
         classification = torch.cat([self.classificationModel(feature) for feature in features], dim=1)
-        classification_type = torch.cat([self.classificationModel(feature) for feature in features], dim=1)
-        classification_color = torch.cat([self.classificationModel(feature) for feature in features], dim=1)
+        classification_type = torch.cat([self.classificationType(feature) for feature in features], dim=1)
+        classification_color = torch.cat([self.classificationColor(feature) for feature in features], dim=1)
 
 
         #####################  feature classificators  ######################
         classification_sunroff = torch.cat([self.classificationModel(feature) for feature in features], dim=1)
         classification_ac      = torch.cat([self.classificationModel(feature) for feature in features], dim=1)
         classification_cab     = torch.cat([self.classificationModel(feature) for feature in features], dim=1)
-        classification_box_    = torch.cat([self.classificationModel(feature) for feature in features], dim=1)
+        classification_box     = torch.cat([self.classificationModel(feature) for feature in features], dim=1)
         classification_flatbed = torch.cat([self.classificationModel(feature) for feature in features], dim=1)
         classification_cart    = torch.cat([self.classificationModel(feature) for feature in features], dim=1)
         classification_ladder  = torch.cat([self.classificationModel(feature) for feature in features], dim=1)
@@ -275,7 +277,27 @@ class ResNet(nn.Module):
         anchors = self.anchors(img_batch)
 
         if self.training:
-            return self.focalLoss(classification, regression, anchors, annotations)
+            classification_loss, regression_loss =  self.focalLoss(classification, regression, anchors, annotations)
+            loss = nn.CrossEntropyLoss()
+            classification_type_loss = loss(classification_type, annotations)
+            classification_color
+
+            #####################  feature classificators  ######################
+            classification_sunroff
+            classification_ac
+            classification_cab
+            classification_box
+            classification_flatbed
+            classification_cart
+            classification_ladder
+            classification_luggage
+            classification_cargo
+            classification_shell
+            classification_wheel
+            classification_wrecked
+            #####################################################################
+
+
         else:
             transformed_anchors = self.regressBoxes(anchors, regression)
             transformed_anchors = self.clipBoxes(transformed_anchors, img_batch)
