@@ -189,7 +189,6 @@ class CSVDataset(Dataset):
         for key, value in self.type_classes.items():
             self.labels4features[value] = key
 
-
         ############################################################################
 
 
@@ -223,7 +222,6 @@ class CSVDataset(Dataset):
             return open(path, 'rb')
         else:
             return open(path, 'r', newline='')
-
 
     def load_classes(self, csv_reader):
         result = {}
@@ -323,19 +321,6 @@ class CSVDataset(Dataset):
         return annotations
 
 
-"""""
-            annotation        = np.zeros((1, 5))
-            
-            annotation[0, 0] = x1
-            annotation[0, 1] = y1
-            annotation[0, 2] = x2
-            annotation[0, 3] = y2
-
-            annotation[0, 4]  = self.name_to_label(annot['class'])
-            annotations       = np.append(annotations, annotation, axis=0)
-        return annotations
-        """""
-
 
 def _read_annotations(self, csv_reader, classes):
         result = {}
@@ -343,33 +328,41 @@ def _read_annotations(self, csv_reader, classes):
             line += 1
 
             try:
-                img_file, x1, y1, x2, y2, class_name = row[:6]
+
+                tag_id, image_id, p1_x, p_1y, p2_x, p2_y, p3_x, p3_y, p4_x, p4_y, general_class, sub_class, sunroof, luggage_carrier, open_cargo_area,\
+                enclosed_cab, spare_wheel, wrecked, flatbed, ladder, enclosed_box, soft_shell_box, harnessed_to_a_cart, ac_vents, color = row[:21]
+
+              #  img_file, x1, y1, x2, y2, class_name = row[:6]
             except ValueError:
                 raise_from(ValueError('line {}: format should be \'img_file,x1,y1,x2,y2,class_name\' or \'img_file,,,,,\''.format(line)), None)
 
-            if img_file not in result:
-                result[img_file] = []
+            if image_id not in result:
+                result[image_id] = []
 
             # If a row contains only an image path, it's an image without annotations.
-            if (x1, y1, x2, y2, class_name) == ('', '', '', '', ''):
-                continue
 
-            x1 = self._parse(x1, int, 'line {}: malformed x1: {{}}'.format(line))
-            y1 = self._parse(y1, int, 'line {}: malformed y1: {{}}'.format(line))
-            x2 = self._parse(x2, int, 'line {}: malformed x2: {{}}'.format(line))
-            y2 = self._parse(y2, int, 'line {}: malformed y2: {{}}'.format(line))
+            #if (x1, y1, x2, y2, class_name) == ('', '', '', '', ''):
+            #                continue
 
-            # Check that the bounding box is valid.
-            if x2 <= x1:
-                raise ValueError('line {}: x2 ({}) must be higher than x1 ({})'.format(line, x2, x1))
-            if y2 <= y1:
-                raise ValueError('line {}: y2 ({}) must be higher than y1 ({})'.format(line, y2, y1))
+            p_1x = self._parse(p_1x, int, 'line {}: malformed x1: {{}}'.format(line))
+            p_1y = self._parse(p_1y, int, 'line {}: malformed y1: {{}}'.format(line))
+            p_2x = self._parse(p_2x, int, 'line {}: malformed x2: {{}}'.format(line))
+            p_2y = self._parse(p_2y, int, 'line {}: malformed y2: {{}}'.format(line))
+            p_3x = self._parse(p_3x, int, 'line {}: malformed x1: {{}}'.format(line))
+            p_3y = self._parse(p_3y, int, 'line {}: malformed y1: {{}}'.format(line))
+            p_4x = self._parse(p_4x, int, 'line {}: malformed x2: {{}}'.format(line))
+            p_4y = self._parse(p_4y, int, 'line {}: malformed y2: {{}}'.format(line))
 
-            # check if the current class name is correctly present
-            if class_name not in classes:
-                raise ValueError('line {}: unknown class name: \'{}\' (classes: {})'.format(line, class_name, classes))
+            x1 = min(int(line[1]['p1_x']), int(line[1]['p2_x']), int(line[1]['p3_x']), int(line[1]['p4_x']))
+            x2 = max(int(line[1]['p1_x']), int(line[1]['p2_x']), int(line[1]['p3_x']), int(line[1]['p4_x']))
+            y1 = min(int(line[1]['p1_y']), int(line[1]['p2_y']), int(line[1]['p3_y']), int(line[1]['p4_y']))
+            y2 = max(int(line[1]['p1_y']), int(line[1]['p2_y']), int(line[1]['p3_y']), int(line[1]['p4_y']))
 
-            result[img_file].append({'x1': x1, 'x2': x2, 'y1': y1, 'y2': y2, 'class': class_name})
+
+
+            result[image_id].append({'x1': x1, 'x2': x2, 'y1': y1, 'y2': y2,'tag_id':tag_id ,'general_class': general_class,'sub_class':sub_class,'sunroof':sunroof,
+                                     'ac_vents':ac_vents,'harnessed_to_a_cart':harnessed_to_a_cart,'soft_shell_box':soft_shell_box,'enclosed_box':enclosed_box,'ladder':ladder,
+                                     'wrecked':wrecked ,'flatbed':flatbed,'spare_wheel':spare_wheel,'enclosed_cab':enclosed_box,'open_cargo_area' : open_cargo_area,'luggage_carrier':luggage_carrier})
         return result
 
 def name_to_label(self, name):
