@@ -254,6 +254,22 @@ class ResNet(nn.Module):
 
         classification = torch.cat([self.classificationModel(feature) for feature in features], dim=1)
 
+
+        #####################  feature classificators  ######################
+        classification_sunroff = torch.cat([self.classificationModel(feature) for feature in features], dim=1)
+        classification_ac      = torch.cat([self.classificationModel(feature) for feature in features], dim=1)
+        classification_cab     = torch.cat([self.classificationModel(feature) for feature in features], dim=1)
+        classification_box_    = torch.cat([self.classificationModel(feature) for feature in features], dim=1)
+        classification_flatbed = torch.cat([self.classificationModel(feature) for feature in features], dim=1)
+        classification_cart    = torch.cat([self.classificationModel(feature) for feature in features], dim=1)
+        classification_ladder  = torch.cat([self.classificationModel(feature) for feature in features], dim=1)
+        classification_luggage = torch.cat([self.classificationModel(feature) for feature in features], dim=1)
+        classification_cargo   = torch.cat([self.classificationModel(feature) for feature in features], dim=1)
+        classification_shell   = torch.cat([self.classificationModel(feature) for feature in features], dim=1)
+        classification_wheel   = torch.cat([self.classificationModel(feature) for feature in features], dim=1)
+        classification_wrecked = torch.cat([self.classificationModel(feature) for feature in features], dim=1)
+        #####################################################################
+
         anchors = self.anchors(img_batch)
 
         if self.training:

@@ -44,17 +44,17 @@ class CocoDataset(Dataset):
         categories = self.coco.loadCats(self.coco.getCatIds())
         categories.sort(key=lambda x: x['id'])
 
-        self.classes             = {}
+        self.genral_classes             = {}
         self.coco_labels         = {}
         self.coco_labels_inverse = {}
         for c in categories:
-            self.coco_labels[len(self.classes)] = c['id']
-            self.coco_labels_inverse[c['id']] = len(self.classes)
-            self.classes[c['name']] = len(self.classes)
+            self.coco_labels[len(self.genral_classes)] = c['id']
+            self.coco_labels_inverse[c['id']] = len(self.genral_classes)
+            self.genral_classes[c['name']] = len(self.genral_classes)
 
         # also load the reverse (label -> name)
         self.labels = {}
-        for key, value in self.classes.items():
+        for key, value in self.genral_classes.items():
             self.labels[value] = key
 
     def __len__(self):
@@ -126,7 +126,9 @@ class CocoDataset(Dataset):
 class CSVDataset(Dataset):
     """CSV dataset."""
 
-    def __init__(self, train_file, class_list, transform=None):
+    # BB: added argument "feature_class_dir" - The dir with all the csv files
+
+    def __init__(self, train_file, class_list,color_classes,type_classes,feature_class_dir , transform=None):
         """
         Args:
             train_file (string): CSV file with training annotations
@@ -137,21 +139,64 @@ class CSVDataset(Dataset):
         self.class_list = class_list
         self.transform = transform
 
-        # parse the provided class file
+        ######## parse general classes
         try:
             with self._open_for_csv(self.class_list) as file:
-                self.classes = self.load_classes(csv.reader(file, delimiter=','))
+                self.genral_classes = self.load_classes(csv.reader(file, delimiter=','))
         except ValueError as e:
             raise_from(ValueError('invalid CSV class file: {}: {}'.format(self.class_list, e)), None)
 
+        #######parse type classes
+        try:
+            with self._open_for_csv(self.type_classes) as file:
+                self.type_classes = self.load_classes(csv.reader(file, delimiter=','))
+        except ValueError as e:
+            raise_from(ValueError('invalid CSV class file: {}: {}'.format(self.type_classes, e)), None)
+        #######parse type classes
+        try:
+            with self._open_for_csv(self.color_classes) as file:
+                 self.color_classes = self.load_classes(csv.reader(file, delimiter=','))
+        except ValueError as e:
+            raise_from(ValueError('invalid CSV class file: {}: {}'.format(self.type_classes, e)), None)
+
+        ######################## parse Features CSVs ################################
+
+        self.features_classes = {}
+        for filename in os.listdir(feature_class_dir):
+            name =filename.split(".")[0]
+            try:
+                 with self._open_for_csv(os.path.join(feature_class_dir,filename)) as file:
+                     self.features_classes[name] = self.load_classes(csv.reader(file, delimiter=','))
+            except ValueError as e:
+                raise_from(ValueError('invalid CSV class file: {}: {}'.format(filename, e)), None)
+        ############################################################################
+
         self.labels = {}
-        for key, value in self.classes.items():
+        for key, value in self.genral_classes.items():
             self.labels[value] = key
+
+        ######################## Feature+color+type labels dictionary ################################
+
+        self.labels4features = {}
+        for key, value in self.features_classes['ac_vents'].items():
+            self.labels4features[value] = key
+
+        self.labels4colors = {}
+        for key, value in self.color_classes.items():
+            self.labels4features[value] = key
+
+        self.labels4types = {}
+        for key, value in self.type_classes.items():
+            self.labels4features[value] = key
+
+
+        ############################################################################
+
 
         # csv with img_path, x1, y1, x2, y2, class_name
         try:
             with self._open_for_csv(self.train_file) as file:
-                self.image_data = self._read_annotations(csv.reader(file, delimiter=','), self.classes)
+                self.image_data = self._read_annotations(csv.reader(file, delimiter=','), self.genral_classes)
         except ValueError as e:
             raise_from(ValueError('invalid CSV annotations file: {}: {}'.format(self.train_file, e)), None)
         self.image_names = list(self.image_data.keys())
@@ -221,25 +266,64 @@ class CSVDataset(Dataset):
         return img.astype(np.float32)/255.0
 
     def load_annotations(self, image_index):
+        #BB: Changed the entire function
         # get ground truth annotations
         annotation_list = self.image_data[self.image_names[image_index]]
-        annotations     = np.zeros((0, 5))
+        annotations     = np.zeros((0, 20))
 
         # some images appear to miss annotations (like image with id 257034)
         if len(annotation_list) == 0:
             return annotations
 
         # parse annotations
-        for idx, a in enumerate(annotation_list):
+        for idx, annot in enumerate(annotation_list):
             # some annotations have basically no width / height, skip them
-            x1 = a['x1']
-            x2 = a['x2']
-            y1 = a['y1']
-            y2 = a['y2']
+            general_class = annot['general_class']
+            sub_class = annot['sub_class']
+            color = annot['color']
+            sunroof = annot['sunroof']
+            ac = annot['ac_vents']
+            cart = annot['harnessed_to_a_cart']
+            soft = annot['soft_shell_box']
+            enclosed_box = annot['enclosed_box']
+            ladder = annot['ladder']
+            flatbed = annot['flatbed']
+            wrecked = annot['wrecked']
+            wheel = annot['spare_wheel']
+            cabin = annot['enclosed_cab']
+            cargo = annot['open_cargo_area']
+            luggage = annot['luggage_carrier']
 
-            if (x2-x1) < 1 or (y2-y1) < 1:
-                continue
 
+
+            annotations[idx, 4]  = annot['tag_id']
+            annotations[idx, 0]  = float(annot['x1'])
+            annotations[idx, 1]  = float(annot['y1'])
+            annotations[idx, 2]  = float(annot['x2'])
+            annotations[idx, 3]  = float(annot['y2'])
+            annotations[idx, 5]  = self.size_classes[general_class]
+            annotations[idx, 6]  = self.type_classes[sub_class]
+            annotations[idx, 7]  = sunroof
+            annotations[idx, 8]  = luggage
+            annotations[idx, 9]  = cargo
+            annotations[idx, 10] = cabin
+            annotations[idx, 11] = wheel
+            annotations[idx, 12] = wrecked
+            annotations[idx, 13] = flatbed
+            annotations[idx, 14] = ladder
+            annotations[idx, 15] = enclosed_box
+            annotations[idx, 16] = soft
+            annotations[idx, 17] = cart
+            annotations[idx, 18] = ac
+            if (color in ["red", "yellow", "blue", "white", "black", "silver/gray"]):
+                annotations[idx, 19] = self.color_classes[color]
+            else:
+                annotations[idx, 19] = self.color_classes["other"]
+
+        return annotations
+
+
+"""""
             annotation        = np.zeros((1, 5))
             
             annotation[0, 0] = x1
@@ -247,12 +331,13 @@ class CSVDataset(Dataset):
             annotation[0, 2] = x2
             annotation[0, 3] = y2
 
-            annotation[0, 4]  = self.name_to_label(a['class'])
+            annotation[0, 4]  = self.name_to_label(annot['class'])
             annotations       = np.append(annotations, annotation, axis=0)
-
         return annotations
+        """""
 
-    def _read_annotations(self, csv_reader, classes):
+
+def _read_annotations(self, csv_reader, classes):
         result = {}
         for line, row in enumerate(csv_reader):
             line += 1
@@ -287,18 +372,18 @@ class CSVDataset(Dataset):
             result[img_file].append({'x1': x1, 'x2': x2, 'y1': y1, 'y2': y2, 'class': class_name})
         return result
 
-    def name_to_label(self, name):
-        return self.classes[name]
+def name_to_label(self, name):
+    return self.genral_classes[name]
 
-    def label_to_name(self, label):
-        return self.labels[label]
+def label_to_name(self, label):
+    return self.labels[label]
 
-    def num_classes(self):
-        return max(self.classes.values()) + 1
+def num_classes(self):
+    return max(self.genral_classes.values()) + 1
 
-    def image_aspect_ratio(self, image_index):
-        image = Image.open(self.image_names[image_index])
-        return float(image.width) / float(image.height)
+def image_aspect_ratio(self, image_index):
+    image = Image.open(self.image_names[image_index])
+    return float(image.width) / float(image.height)
 
 
 def collater(data):

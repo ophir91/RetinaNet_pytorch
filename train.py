@@ -37,7 +37,10 @@ def main(args=None):
     parser.add_argument('--dataset', help='Dataset type, must be one of csv or coco.')
     parser.add_argument('--coco_path', help='Path to COCO directory')
     parser.add_argument('--csv_train', help='Path to file containing training annotations (see readme)')
-    parser.add_argument('--csv_classes', help='Path to file containing class list (see readme)')
+    parser.add_argument('--csv_classes_general_general', help='Path to file containing class list (see readme)')
+    parser.add_argument('--csv_features', help='Path to dir containing features csv files')
+    parser.add_argument('--csv_colors', help='Path to file containing color classes')
+    parser.add_argument('--csv_types', help='Path to file containing type classes')
     parser.add_argument('--csv_val', help='Path to file containing validation annotations (optional, see readme)')
     parser.add_argument('--pretrain_model', help='Path to model (.pt) file.')
     parser.add_argument('--depth', help='Resnet depth, must be one of 18, 34, 50, 101, 152', type=int, default=50)
@@ -59,17 +62,17 @@ def main(args=None):
         if parser.csv_train is None:
             raise ValueError('Must provide --csv_train when training on COCO,')
 
-        if parser.csv_classes is None:
-            raise ValueError('Must provide --csv_classes when training on COCO,')
+        if parser.csv_classes_general is None:
+            raise ValueError('Must provide --csv_classes_general when training on COCO,')
 
 
-        dataset_train = CSVDataset(train_file=parser.csv_train, class_list=parser.csv_classes, transform=transforms.Compose([Normalizer(), Augmenter(), Resizer()]))
+        dataset_train = CSVDataset(train_file=parser.csv_train, class_list=parser.csv_classes_general,color_classes=parser.csv_color,types_classes=parser.csv_types,feature_class_dir=parser.csv_features, transform=transforms.Compose([Normalizer(), Augmenter(), Resizer()]))
 
         if parser.csv_val is None:
             dataset_val = None
             print('No validation annotations provided.')
         else:
-            dataset_val = CSVDataset(train_file=parser.csv_val, class_list=parser.csv_classes, transform=transforms.Compose([Normalizer(), Resizer()]))
+            dataset_val = CSVDataset(train_file=parser.csv_val, class_list=parser.csv_classes_general, transform=transforms.Compose([Normalizer(), Resizer()]))
 
     else:
         raise ValueError('Dataset type not understood (must be csv or coco), exiting.')
