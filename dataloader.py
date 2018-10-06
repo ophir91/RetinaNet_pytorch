@@ -178,8 +178,8 @@ class CSVDataset(Dataset):
     def load_annotations(self, image_index):
         #BB: Changed the entire function
         # get ground truth annotations
-        annotation_list = self.image_data[self.image_names[image_index]]
-        annotations     = np.zeros((0, 20))
+        annotation_list = self.image_data[self.image_names[image_index].split('/')[-1].split('.')[0]]
+        annotations     = np.zeros((0, 21))
 
         # some images appear to miss annotations (like image with id 257034)
         if len(annotation_list) == 0:
@@ -204,31 +204,33 @@ class CSVDataset(Dataset):
             cargo = annot['open_cargo_area']
             luggage = annot['luggage_carrier']
 
+            annotation = np.zeros((1,21))
 
-
-            annotations[idx, 4]  = annot['tag_id']
-            annotations[idx, 0]  = float(annot['x1'])
-            annotations[idx, 1]  = float(annot['y1'])
-            annotations[idx, 2]  = float(annot['x2'])
-            annotations[idx, 3]  = float(annot['y2'])
-            annotations[idx, 5]  = self.size_classes[general_class]
-            annotations[idx, 6]  = self.type_classes[sub_class]
-            annotations[idx, 7]  = sunroof
-            annotations[idx, 8]  = luggage
-            annotations[idx, 9]  = cargo
-            annotations[idx, 10] = cabin
-            annotations[idx, 11] = wheel
-            annotations[idx, 12] = wrecked
-            annotations[idx, 13] = flatbed
-            annotations[idx, 14] = ladder
-            annotations[idx, 15] = enclosed_box
-            annotations[idx, 16] = soft
-            annotations[idx, 17] = cart
-            annotations[idx, 18] = ac
+            annotation[0, 4]  = annot['tag_id']
+            annotation[0, 0]  = float(annot['x1'])
+            annotation[0, 1]  = float(annot['y1'])
+            annotation[0, 2]  = float(annot['x2'])
+            annotation[0, 3]  = float(annot['y2'])
+            annotation[0, 5]  = self.genral_classes[general_class]
+            annotation[0, 6]  = self.type_classes[sub_class]
+            annotation[0, 7]  = sunroof
+            annotation[0, 8]  = luggage
+            annotation[0, 9]  = cargo
+            annotation[0, 10] = cabin
+            annotation[0, 11] = wheel
+            annotation[0, 12] = wrecked
+            annotation[0, 13] = flatbed
+            annotation[0, 14] = ladder
+            annotation[0, 15] = enclosed_box
+            annotation[0, 16] = soft
+            annotation[0, 17] = cart
+            annotation[0, 18] = ac
             if (color in ["red", "yellow", "blue", "white", "black", "silver/gray"]):
-                annotations[idx, 19] = self.color_classes[color]
+                annotation[0, 19] = self.color_classes[color]
             else:
-                annotations[idx, 19] = self.color_classes["other"]
+                annotation[0, 19] = self.color_classes["other"]
+
+            annotations = np.append(annotations, annotation,axis=0)
 
         return annotations
 
@@ -275,9 +277,13 @@ class CSVDataset(Dataset):
 
 
 
-            result[image_id].append({'x1': x1, 'x2': x2, 'y1': y1, 'y2': y2,'tag_id':tag_id ,'general_class': general_class,'sub_class':sub_class,'sunroof':sunroof,
-                                     'ac_vents':ac_vents,'harnessed_to_a_cart':harnessed_to_a_cart,'soft_shell_box':soft_shell_box,'enclosed_box':enclosed_box,'ladder':ladder,
-                                     'wrecked':wrecked ,'flatbed':flatbed,'spare_wheel':spare_wheel,'enclosed_cab':enclosed_box,'open_cargo_area' : open_cargo_area,'luggage_carrier':luggage_carrier})
+            result[image_id].append({'x1': x1, 'x2': x2, 'y1': y1, 'y2': y2,'tag_id':tag_id ,
+                                     'general_class': general_class,'sub_class':sub_class,'sunroof':sunroof,
+                                     'ac_vents':ac_vents,'harnessed_to_a_cart':harnessed_to_a_cart,
+                                     'soft_shell_box':soft_shell_box,'enclosed_box':enclosed_box,'ladder':ladder,
+                                     'wrecked':wrecked ,'flatbed':flatbed,'spare_wheel':spare_wheel,
+                                     'enclosed_cab':enclosed_box,'open_cargo_area' : open_cargo_area,
+                                     'luggage_carrier':luggage_carrier, 'color' : color})
         return result
 
     def name_to_label(self, name):
@@ -317,7 +323,7 @@ def collater(data):
 
     if max_num_annots > 0:
 
-        annot_padded = torch.ones((len(annots), max_num_annots, 5)) * -1
+        annot_padded = torch.ones((len(annots), max_num_annots, 21)) * -1
 
         if max_num_annots > 0:
             for idx, annot in enumerate(annots):
@@ -325,7 +331,7 @@ def collater(data):
                 if annot.shape[0] > 0:
                     annot_padded[idx, :annot.shape[0], :] = annot
     else:
-        annot_padded = torch.ones((len(annots), 1, 5)) * -1
+        annot_padded = torch.ones((len(annots), 1, 21)) * -1
 
 
     padded_imgs = padded_imgs.permute(0, 3, 1, 2)
