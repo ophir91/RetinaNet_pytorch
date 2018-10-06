@@ -138,6 +138,8 @@ class CSVDataset(Dataset):
         self.train_file = train_file
         self.class_list = class_list
         self.transform = transform
+        self.type_classes = type_classes
+        self.color_classes = color_classes
 
         ######## parse general classes
         try:
@@ -148,7 +150,7 @@ class CSVDataset(Dataset):
 
         #######parse type classes
         try:
-            with self._open_for_csv(self.type_classes) as file:
+            with self._open_for_csv(type_classes) as file:
                 self.type_classes = self.load_classes(csv.reader(file, delimiter=','))
         except ValueError as e:
             raise_from(ValueError('invalid CSV class file: {}: {}'.format(self.type_classes, e)), None)
@@ -183,11 +185,11 @@ class CSVDataset(Dataset):
 
         self.labels4colors = {}
         for key, value in self.color_classes.items():
-            self.labels4features[value] = key
+            self.labels4colors[value] = key
 
         self.labels4types = {}
         for key, value in self.type_classes.items():
-            self.labels4features[value] = key
+            self.labels4types[value] = key
 
 
         ############################################################################
@@ -196,7 +198,7 @@ class CSVDataset(Dataset):
         # csv with img_path, x1, y1, x2, y2, class_name
         try:
             with self._open_for_csv(self.train_file) as file:
-                self.image_data = self._read_annotations(csv.reader(file, delimiter=','), self.genral_classes)
+                self.image_data = self._read_annotations(csv.reader(file, delimiter=','))
         except ValueError as e:
             raise_from(ValueError('invalid CSV annotations file: {}: {}'.format(self.train_file, e)), None)
         self.image_names = list(self.image_data.keys())
@@ -322,22 +324,7 @@ class CSVDataset(Dataset):
 
         return annotations
 
-
-"""""
-            annotation        = np.zeros((1, 5))
-            
-            annotation[0, 0] = x1
-            annotation[0, 1] = y1
-            annotation[0, 2] = x2
-            annotation[0, 3] = y2
-
-            annotation[0, 4]  = self.name_to_label(annot['class'])
-            annotations       = np.append(annotations, annotation, axis=0)
-        return annotations
-        """""
-
-
-def _read_annotations(self, csv_reader, classes):
+    def _read_annotations(self, csv_reader, classes):
         result = {}
         for line, row in enumerate(csv_reader):
             line += 1
@@ -372,18 +359,18 @@ def _read_annotations(self, csv_reader, classes):
             result[img_file].append({'x1': x1, 'x2': x2, 'y1': y1, 'y2': y2, 'class': class_name})
         return result
 
-def name_to_label(self, name):
-    return self.genral_classes[name]
+    def name_to_label(self, name):
+        return self.genral_classes[name]
 
-def label_to_name(self, label):
-    return self.labels[label]
+    def label_to_name(self, label):
+        return self.labels[label]
 
-def num_classes(self):
-    return max(self.genral_classes.values()) + 1
+    def num_classes(self):
+        return max(self.genral_classes.values()) + 1
 
-def image_aspect_ratio(self, image_index):
-    image = Image.open(self.image_names[image_index])
-    return float(image.width) / float(image.height)
+    def image_aspect_ratio(self, image_index):
+        image = Image.open(self.image_names[image_index])
+        return float(image.width) / float(image.height)
 
 
 def collater(data):
@@ -391,7 +378,7 @@ def collater(data):
     imgs = [s['img'] for s in data]
     annots = [s['annot'] for s in data]
     scales = [s['scale'] for s in data]
-        
+
     widths = [int(s.shape[0]) for s in imgs]
     heights = [int(s.shape[1]) for s in imgs]
     batch_size = len(imgs)
@@ -406,7 +393,7 @@ def collater(data):
         padded_imgs[i, :int(img.shape[0]), :int(img.shape[1]), :] = img
 
     max_num_annots = max(annot.shape[0] for annot in annots)
-    
+
     if max_num_annots > 0:
 
         annot_padded = torch.ones((len(annots), max_num_annots, 5)) * -1
