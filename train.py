@@ -42,6 +42,7 @@ def main(args=None):
     parser.add_argument('--csv_colors', help='Path to file containing color classes')
     parser.add_argument('--csv_types', help='Path to file containing type classes')
     parser.add_argument('--csv_val', help='Path to file containing validation annotations (optional, see readme)')
+    parser.add_argument('--image_dir', help='Path to file containing images (optional, see readme)')
     parser.add_argument('--pretrain_model', help='Path to model (.pt) file.')
     parser.add_argument('--depth', help='Resnet depth, must be one of 18, 34, 50, 101, 152', type=int, default=50)
     parser.add_argument('--epochs', help='Number of epochs', type=int, default=100)
@@ -66,7 +67,10 @@ def main(args=None):
             raise ValueError('Must provide --csv_classes_general when training on COCO,')
 
 
-        dataset_train = CSVDataset(train_file=parser.csv_train, class_list=parser.csv_classes_general,color_classes=parser.csv_colors,type_classes=parser.csv_types,feature_class_dir=parser.csv_features, transform=transforms.Compose([Normalizer(), Augmenter(), Resizer()]))
+        dataset_train = CSVDataset(train_file=parser.csv_train, class_list=parser.csv_classes_general,
+                                   color_classes=parser.csv_colors,type_classes=parser.csv_types,
+                                   feature_class_dir=parser.csv_features, image_dir =parser.image_dir,
+                                   transform=transforms.Compose([Normalizer(), Augmenter(), Resizer()]))
 
         if parser.csv_val is None:
             dataset_val = None
