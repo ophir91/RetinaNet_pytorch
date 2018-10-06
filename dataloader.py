@@ -128,7 +128,7 @@ class CSVDataset(Dataset):
 
     # BB: added argument "feature_class_dir" - The dir with all the csv files
 
-    def __init__(self, train_file, class_list,color_classes,type_classes,feature_class_dir , transform=None):
+    def __init__(self, train_file, class_list,color_classes,type_classes,feature_class_dir, image_dir, transform=None):
         """
         Args:
             train_file (string): CSV file with training annotations
@@ -138,7 +138,9 @@ class CSVDataset(Dataset):
         self.train_file = train_file
         self.class_list = class_list
         self.transform = transform
-
+        self.type_classes = type_classes
+        self.color_classes = color_classes
+        self.image_dir = image_dir
         ######## parse general classes
         try:
             with self._open_for_csv(self.class_list) as file:
@@ -148,7 +150,7 @@ class CSVDataset(Dataset):
 
         #######parse type classes
         try:
-            with self._open_for_csv(self.type_classes) as file:
+            with self._open_for_csv(type_classes) as file:
                 self.type_classes = self.load_classes(csv.reader(file, delimiter=','))
         except ValueError as e:
             raise_from(ValueError('invalid CSV class file: {}: {}'.format(self.type_classes, e)), None)
@@ -183,11 +185,11 @@ class CSVDataset(Dataset):
 
         self.labels4colors = {}
         for key, value in self.color_classes.items():
-            self.labels4features[value] = key
+            self.labels4colors[value] = key
 
         self.labels4types = {}
         for key, value in self.type_classes.items():
-            self.labels4features[value] = key
+            self.labels4types[value] = key
 
         ############################################################################
 
@@ -195,10 +197,22 @@ class CSVDataset(Dataset):
         # csv with img_path, x1, y1, x2, y2, class_name
         try:
             with self._open_for_csv(self.train_file) as file:
-                self.image_data = self._read_annotations(csv.reader(file, delimiter=','), self.genral_classes)
+                self.image_data = self._read_annotations(csv.reader(file, delimiter=','),classes=self.genral_classes)
         except ValueError as e:
             raise_from(ValueError('invalid CSV annotations file: {}: {}'.format(self.train_file, e)), None)
-        self.image_names = list(self.image_data.keys())
+
+        self.image_names = []
+        image_list = os.listdir(image_dir)
+        for image_id in self.image_data:
+            if str(image_id) + '.tiff' in image_list:
+                new_line = image_dir + str(image_id) + '.tiff'
+            elif str(image_id) + '.jpg' in image_list:
+                new_line = image_dir + str(image_id) + '.jpg'
+            elif str(image_id) + '.tif' in image_list:
+                new_line = image_dir + str(image_id) + '.tif'
+            else:
+                continue
+            self.image_names.append(new_line)
 
     def _parse(self, value, function, fmt):
         """
@@ -320,17 +334,15 @@ class CSVDataset(Dataset):
 
         return annotations
 
-
-
-def _read_annotations(self, csv_reader, classes):
+    def _read_annotations(self, csv_reader, classes):
         result = {}
         for line, row in enumerate(csv_reader):
             line += 1
 
             try:
 
-                tag_id, image_id, p1_x, p_1y, p2_x, p2_y, p3_x, p3_y, p4_x, p4_y, general_class, sub_class, sunroof, luggage_carrier, open_cargo_area,\
-                enclosed_cab, spare_wheel, wrecked, flatbed, ladder, enclosed_box, soft_shell_box, harnessed_to_a_cart, ac_vents, color = row[:21]
+                tag_id, image_id, p1_x, p1_y, p2_x, p2_y, p3_x, p3_y, p4_x, p4_y, general_class, sub_class, sunroof, luggage_carrier, open_cargo_area,\
+                enclosed_cab, spare_wheel, wrecked, flatbed, ladder, enclosed_box, soft_shell_box, harnessed_to_a_cart, ac_vents, color = row[:25]
 
               #  img_file, x1, y1, x2, y2, class_name = row[:6]
             except ValueError:
@@ -344,19 +356,24 @@ def _read_annotations(self, csv_reader, classes):
             #if (x1, y1, x2, y2, class_name) == ('', '', '', '', ''):
             #                continue
 
-            p_1x = self._parse(p_1x, int, 'line {}: malformed x1: {{}}'.format(line))
-            p_1y = self._parse(p_1y, int, 'line {}: malformed y1: {{}}'.format(line))
-            p_2x = self._parse(p_2x, int, 'line {}: malformed x2: {{}}'.format(line))
-            p_2y = self._parse(p_2y, int, 'line {}: malformed y2: {{}}'.format(line))
-            p_3x = self._parse(p_3x, int, 'line {}: malformed x1: {{}}'.format(line))
-            p_3y = self._parse(p_3y, int, 'line {}: malformed y1: {{}}'.format(line))
-            p_4x = self._parse(p_4x, int, 'line {}: malformed x2: {{}}'.format(line))
-            p_4y = self._parse(p_4y, int, 'line {}: malformed y2: {{}}'.format(line))
+            p1_x = self._parse(p1_x, float, 'line {}: malformed x1: {{}}'.format(line))
+            p1_y = self._parse(p1_y, float, 'line {}: malformed y1: {{}}'.format(line))
+            p2_x = self._parse(p2_x, float, 'line {}: malformed x2: {{}}'.format(line))
+            p2_y = self._parse(p2_y, float, 'line {}: malformed y2: {{}}'.format(line))
+            p3_x = self._parse(p3_x, float, 'line {}: malformed x1: {{}}'.format(line))
+            p3_y = self._parse(p3_y, float, 'line {}: malformed y1: {{}}'.format(line))
+            p4_x = self._parse(p4_x, float, 'line {}: malformed x2: {{}}'.format(line))
+            p4_y = self._parse(p4_y, float, 'line {}: malformed y2: {{}}'.format(line))
 
-            x1 = min(int(line[1]['p1_x']), int(line[1]['p2_x']), int(line[1]['p3_x']), int(line[1]['p4_x']))
-            x2 = max(int(line[1]['p1_x']), int(line[1]['p2_x']), int(line[1]['p3_x']), int(line[1]['p4_x']))
-            y1 = min(int(line[1]['p1_y']), int(line[1]['p2_y']), int(line[1]['p3_y']), int(line[1]['p4_y']))
-            y2 = max(int(line[1]['p1_y']), int(line[1]['p2_y']), int(line[1]['p3_y']), int(line[1]['p4_y']))
+            x1 = min(int(p1_x), int(p2_x), int(p3_x), int(p4_x))
+            x2 = max(int(p1_x), int(p2_x), int(p3_x), int(p4_x))
+            y1 = min(int(p1_y), int(p2_y), int(p3_y), int(p4_y))
+            y2 = max(int(p1_y), int(p2_y), int(p3_y), int(p4_y))
+
+            # x1 = min(int(line[1]['p1_x']), int(line[1]['p2_x']), int(line[1]['p3_x']), int(line[1]['p4_x']))
+            # x2 = max(int(line[1]['p1_x']), int(line[1]['p2_x']), int(line[1]['p3_x']), int(line[1]['p4_x']))
+            # y1 = min(int(line[1]['p1_y']), int(line[1]['p2_y']), int(line[1]['p3_y']), int(line[1]['p4_y']))
+            # y2 = max(int(line[1]['p1_y']), int(line[1]['p2_y']), int(line[1]['p3_y']), int(line[1]['p4_y']))
 
 
 
@@ -365,18 +382,18 @@ def _read_annotations(self, csv_reader, classes):
                                      'wrecked':wrecked ,'flatbed':flatbed,'spare_wheel':spare_wheel,'enclosed_cab':enclosed_box,'open_cargo_area' : open_cargo_area,'luggage_carrier':luggage_carrier})
         return result
 
-def name_to_label(self, name):
-    return self.genral_classes[name]
+    def name_to_label(self, name):
+        return self.genral_classes[name]
 
-def label_to_name(self, label):
-    return self.labels[label]
+    def label_to_name(self, label):
+        return self.labels[label]
 
-def num_classes(self):
-    return max(self.genral_classes.values()) + 1
+    def num_classes(self):
+        return max(self.genral_classes.values()) + 1
 
-def image_aspect_ratio(self, image_index):
-    image = Image.open(self.image_names[image_index])
-    return float(image.width) / float(image.height)
+    def image_aspect_ratio(self, image_index):
+        image = Image.open(self.image_names[image_index])
+        return float(image.width) / float(image.height)
 
 
 def collater(data):
@@ -384,7 +401,7 @@ def collater(data):
     imgs = [s['img'] for s in data]
     annots = [s['annot'] for s in data]
     scales = [s['scale'] for s in data]
-        
+
     widths = [int(s.shape[0]) for s in imgs]
     heights = [int(s.shape[1]) for s in imgs]
     batch_size = len(imgs)
@@ -399,7 +416,7 @@ def collater(data):
         padded_imgs[i, :int(img.shape[0]), :int(img.shape[1]), :] = img
 
     max_num_annots = max(annot.shape[0] for annot in annots)
-    
+
     if max_num_annots > 0:
 
         annot_padded = torch.ones((len(annots), max_num_annots, 5)) * -1
